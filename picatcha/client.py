@@ -1,5 +1,8 @@
 """Python client for Picatcha"""
 from urllib2 import urlopen
+import random
+from datetime import date
+import urllib
 
 import simplejson
 
@@ -19,7 +22,9 @@ def get_html(api_server, public_key, elm_id='picatcha', customizations=None):
         'api_server': api_server,
         'public_key': public_key,
         'elm_id': elm_id,
-        'customizations': simplejson.dumps(customizations)}
+        'customizations': simplejson.dumps(customizations),
+        'session': str((date.today() - date(1970,1,1)).days*86400)+public_key+str(random.randrange(1000000000,9999999999))}
+    print params
 
     return """
     <script type="text/javascript"
@@ -32,11 +37,35 @@ def get_html(api_server, public_key, elm_id='picatcha', customizations=None):
     Picatcha.setCustomization(%(customizations)s);
     window.onload = function(){Picatcha.create('%(elm_id)s');}
     </script>
-    <div id="%(elm_id)s"></div>""" % params
-
+    <div id="%(elm_id)s"></div>
+    <noscript>
+          <input type="hidden" name="pubkey" value="%(public_key)s" />
+          <input type="hidden" name="picatcha_iframe_session" value= "%(session)s" />
+          <iframe frameborder="0" width="100%%" height="255px" src="%(api_server)s/nojs?k=%(public_key)s&s=%(session)s">Loading...</iframe>
+      </noscript>""" % params
+    
+    
+    
 
 def validate(api_server, params):
     """Validate answers and return response"""
+    #print params
+    #print "key, session"
+    #print [params['pk'], params['ses']]
+    if params['ses']:
+        #do no-js validation
+        params = urllib.urlencode({'k':params['pk'],'pk':params['k'],'s':params['ses']})
+        url = "%s/nojsc" % api_server
+        #print "----- simplejson.dumps(params) -----"
+        #print simplejson.dumps(params)
+        # the k and pk get reversed
+        resp_raw = urlopen(url, data=params).read() #simplejson.dumps({'k':params['pk'],'pk':params['k'],'s':params['ses']})
+        #print resp_raw
+        resp = simplejson.loads(resp_raw)
+        #print resp
+        return PicatchaResponse(is_valid=(resp.get('s') == True), 
+            error_code = resp.get('e'))
+         
     url = "%s/v" % api_server
     resp_raw = urlopen(url, data=simplejson.dumps(params)).read()
     resp = simplejson.loads(resp_raw)
