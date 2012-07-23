@@ -49,23 +49,16 @@ def get_html(api_server, public_key, elm_id='picatcha', customizations=None):
 
 def validate(api_server, params):
     """Validate answers and return response"""
-    #print params
-    #print "key, session"
-    #print [params['pk'], params['ses']]
-    if params['ses']:
+    if 'ses' in params:
         #do no-js validation
         params = urllib.urlencode({'k':params['pk'],'pk':params['k'],'s':params['ses']})
         url = "%s/nojsc" % api_server
-        #print "----- simplejson.dumps(params) -----"
-        #print simplejson.dumps(params)
         # the k and pk get reversed
-        resp_raw = urlopen(url, data=params).read() #simplejson.dumps({'k':params['pk'],'pk':params['k'],'s':params['ses']})
-        #print resp_raw
+        resp_raw = urlopen(url, data=params).read()
         resp = simplejson.loads(resp_raw)
-        #print resp
         return PicatchaResponse(is_valid=(resp.get('s') == True), 
             error_code = resp.get('e'))
-         
+    
     url = "%s/v" % api_server
     resp_raw = urlopen(url, data=simplejson.dumps(params)).read()
     resp = simplejson.loads(resp_raw)
